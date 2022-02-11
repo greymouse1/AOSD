@@ -1,0 +1,114 @@
+---
+title: "Final project - Temperatures"
+author: "Nikola Grlj"
+date: "2/4/2022"
+output: html_document
+---
+
+Load all necessary packages
+```{r, echo=FALSE, message=FALSE}
+library (plyr)
+library(tidyverse)
+library(sf)
+library(ggplot2)
+library(stars)
+library(gstat)
+library(lubridate)
+library(spacetime)
+library(sp)
+library(stringr)
+```
+
+Import stations
+```{r, echo=FALSE, message=FALSE}
+stations <- read_csv("stations.csv")
+```
+
+Round all dates down to year
+```{r, echo=FALSE, message=FALSE}
+stations$YEAR <- floor_date(stations$DATE, "year")
+```
+
+Temperature is in Fahrenheight so let's convert it to Celsius degrees
+```{r, echo=FALSE, message=FALSE}
+stations$TEMP <- (((stations$TEMP)-32)/1.8)
+```
+
+We need to aggregate data so we get annual mean (from daily means), so we will have annual daily mean for every station for all years.
+```{r, echo=FALSE, message=FALSE}
+agg = aggregate(stations$TEMP,list(YEAR = stations$YEAR,STATION_ID = stations$STATION,NAME = stations$NAME,LAT = stations$LATITUDE,LONG = stations$LONGITUDE,ELEVATION = stations$ELEVATION), mean)
+colnames(agg)[which(names(agg) == "x")] <- "MEAN_TEMP"
+agg <- agg[order(agg$YEAR), ]
+agg$YEAR <- format(as.Date(agg$YEAR, format="%d/%m/%Y"),"%Y")
+```
+
+There are 32 possible stations:
+```{r, echo=FALSE, message=FALSE}
+print(unique(agg$NAME))
+```
+
+Now we have issue because it seems that not every year has data for every station.
+We can check that in the following way:
+```{r, echo=FALSE, message=FALSE}
+checker <- function(input_file) {
+counter <- 0
+full_counter <- 0
+stations <- c()
+my_list <- c()
+differences <- c()
+for (unique_year in unique(input_file$YEAR)) {
+  for (year in input_file$YEAR) {
+    if (unique_year == year) {
+      counter = counter + 1
+      full_counter = full_counter + 1
+      stations[length(stations)+1] <- input_file$STATION_ID[full_counter]
+    }
+  }
+  difference <- setdiff(unique(input_file$STATION_ID),stations)
+  print(difference)
+  differences[(length(differences)+1)] <- paste(unlist(difference),collapse=",")
+  my_list[(length(my_list)+1)] <- counter
+  counter <- 0
+  stations <- c()
+}
+n_stations_by_year <- data.frame(YEAR = unique(input_file$YEAR),N_stations = my_list, DIFFERENCE_ID = differences)
+return(n_stations_by_year)
+}
+checker(agg)
+```
+
+To make things coherent, we will use only the same stations (I'm not sure if this is right, difference is in only one station anyway), so I will remove from observation year 2005 (it has only 13 stations), and I will remove one station for years which have data from 32 stations, so all years can have 31 station. We can see station which is missing for some years is station 14324.
+Let's include only data we need:
+```{r, echo=FALSE, message=FALSE}
+aggregated_cleaned <- subset(aggregated, YEAR != "2005" )
+aggregated_cleaned2 <- subset(aggregated_cleaned, STATION_ID != "14324")
+```
+Now we should have dataset without year 2005 and without station 14324. Let's check if that's correct:
+```{r, echo=FALSE, message=FALSE}
+checker(aggregated_cleaned2)
+```
+
+
+Create space-time object STFDF
+```{r, echo=FALSE, message=FALSE}
+sp <- cbind(x = c(0, 0, 1), y = c(0, 1, 1))
+row.names(sp) <- paste("point", 1:nrow(sp), sep = "")
+sp <- SpatialPoints(sp)
+time <- as.POSIXct("2010-08-05", tz = "GMT") + 3600 * (10:13)
+m <- c(10, 20, 30)
+values <- rnorm(length(sp) * length(time), mean = rep(m, 4))
+IDs <- paste("ID", 1:length(values), sep = "_")
+mydata <- data.frame(values = signif(values, 3), ID = IDs)
+library("spacetime")
+stfdf <- STFDF(sp, time, data = mydata)
+```
+
+Create space-time object STFDF
+```{r, echo=FALSE, message=FALSE}
+sp <- cbind(LON = agg$LONGITUDE[1:32], LAT = agg$LATITUDE[1:32])
+row.names(sp) <- paste(unique(agg$STATION))
+sp <- SpatialPoints(sp)
+time <- as.POSIXct(unique(agg$YEAR))
+values <- agg$TEMP
+
+```
