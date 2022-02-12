@@ -40,6 +40,7 @@ agg = aggregate(stations$TEMP,list(YEAR = stations$YEAR,STATION_ID = stations$ST
 colnames(agg)[which(names(agg) == "x")] <- "MEAN_TEMP"
 agg <- agg[order(agg$YEAR), ]
 agg$YEAR <- format(as.Date(agg$YEAR, format="%d/%m/%Y"),"%Y")
+agg$STATION_ID <- substring(agg$STATION_ID,1,5)
 ```
 
 There are 32 possible stations:
@@ -77,17 +78,18 @@ return(n_stations_by_year)
 checker(agg)
 ```
 
-To make things coherent, we will use only the same stations (I'm not sure if this is right, difference is in only one station anyway), so I will remove from observation year 2005 (it has only 13 stations), and I will remove one station for years which have data from 32 stations, so all years can have 31 station. We can see station which is missing for some years is station 14324.
+To make things coherent (I'm not sure if this is correct way) we will remove records for year 2005. and also all records for stations 14442 and 14446
 Let's include only data we need:
 ```{r, echo=FALSE, message=FALSE}
-aggregated_cleaned <- subset(aggregated, YEAR != "2005" )
-aggregated_cleaned2 <- subset(aggregated_cleaned, STATION_ID != "14324")
+agg2 <- subset(agg, YEAR != "2005" )
+agg3 <- subset(agg2, STATION_ID != "14442")
+agg4 <- subset(agg3, STATION_ID != "14446")
 ```
 Now we should have dataset without year 2005 and without station 14324. Let's check if that's correct:
 ```{r, echo=FALSE, message=FALSE}
-checker(aggregated_cleaned2)
+checker(agg4)
 ```
-
+As we can see, now all years have same stations (30 of them). Next thing we can do is create space-time object STFDF.
 
 Create space-time object STFDF
 ```{r, echo=FALSE, message=FALSE}
@@ -99,16 +101,18 @@ m <- c(10, 20, 30)
 values <- rnorm(length(sp) * length(time), mean = rep(m, 4))
 IDs <- paste("ID", 1:length(values), sep = "_")
 mydata <- data.frame(values = signif(values, 3), ID = IDs)
-library("spacetime")
 stfdf <- STFDF(sp, time, data = mydata)
 ```
 
 Create space-time object STFDF
 ```{r, echo=FALSE, message=FALSE}
-sp <- cbind(LON = agg$LONGITUDE[1:32], LAT = agg$LATITUDE[1:32])
-row.names(sp) <- paste(unique(agg$STATION))
-sp <- SpatialPoints(sp)
-time <- as.POSIXct(unique(agg$YEAR))
-values <- agg$TEMP
+station_coords <- cbind(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
+row.names(station_coords) <- paste(agg4$NAME[1:30])
+station_coords <- SpatialPoints(station_coords)
+time <- as.POSIXct(unique(agg4$YEAR),tz="", "%Y")
+values <- agg4$MEAN_TEMP
+IDs <- paste("ID", 1:length(agg4$MEAN_TEMP), sep = "_")
+df <- data.frame(values = values, ID = IDs)
+st_object <- STFDF(station_coords,time,data=df)
 
 ```
