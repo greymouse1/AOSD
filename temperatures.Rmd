@@ -17,6 +17,8 @@ library(lubridate)
 library(spacetime)
 library(sp)
 library(stringr)
+library(maps)
+library(rnaturalearth)
 ```
 
 Import stations
@@ -91,18 +93,6 @@ checker(agg4)
 ```
 As we can see, now all years have same stations (30 of them). Next thing we can do is create space-time object STFDF.
 
-Create space-time object STFDF
-```{r, echo=FALSE, message=FALSE}
-sp <- cbind(x = c(0, 0, 1), y = c(0, 1, 1))
-row.names(sp) <- paste("point", 1:nrow(sp), sep = "")
-sp <- SpatialPoints(sp)
-time <- as.POSIXct("2010-08-05", tz = "GMT") + 3600 * (10:13)
-m <- c(10, 20, 30)
-values <- rnorm(length(sp) * length(time), mean = rep(m, 4))
-IDs <- paste("ID", 1:length(values), sep = "_")
-mydata <- data.frame(values = signif(values, 3), ID = IDs)
-stfdf <- STFDF(sp, time, data = mydata)
-```
 
 Create space-time object STFDF
 ```{r, echo=FALSE, message=FALSE}
@@ -114,5 +104,11 @@ values <- agg4$MEAN_TEMP
 IDs <- paste("ID", 1:length(agg4$MEAN_TEMP), sep = "_")
 df <- data.frame(values = values, ID = IDs)
 st_object <- STFDF(station_coords,time,data=df)
-
+```
+Load Croatian map
+```{r, echo=FALSE, message=FALSE}
+croatia_sea <- st_read("HRV_adm/croatia.geojson")
+```
+```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
+ggplot() + geom_sf(data = croatia_sea)
 ```
