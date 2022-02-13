@@ -108,7 +108,14 @@ st_object <- STFDF(station_coords,time,data=df)
 Load Croatian map
 ```{r, echo=FALSE, message=FALSE}
 croatia_sea <- st_read("HRV_adm/croatia.geojson")
+croatia_land <- st_read("HRV_adm/croatia_land.geojson")
+single_sf <- bind_rows(list(croatia_sea,croatia_land))
 ```
+
+
 ```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
-ggplot() + geom_sf(data = croatia_sea)
+stations_sf <- st_as_sf(station_coords)
+stations_sf$STATION <- row.names(station_coords)
+st_crs(stations_sf) = 4326
+ggplot() + geom_sf(data = single_sf) + geom_sf(data = stations_sf,shape = 4, color = "darkred", size = 5)
 ```
