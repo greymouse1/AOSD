@@ -19,6 +19,7 @@ library(sp)
 library(stringr)
 library(maps)
 library(rnaturalearth)
+library(ggrepel)
 ```
 
 Import stations
@@ -96,9 +97,9 @@ As we can see, now all years have same stations (30 of them). Next thing we can 
 
 Create space-time object STFDF
 ```{r, echo=FALSE, message=FALSE}
-station_coords <- cbind(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
-row.names(station_coords) <- paste(agg4$NAME[1:30])
-station_coords <- SpatialPoints(station_coords)
+station_coords_df <- cbind(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
+row.names(station_coords_df) <- paste(agg4$NAME[1:30])
+station_coords <- SpatialPoints(station_coords_df)
 time <- as.POSIXct(unique(agg4$YEAR),tz="", "%Y")
 values <- agg4$MEAN_TEMP
 IDs <- paste("ID", 1:length(agg4$MEAN_TEMP), sep = "_")
@@ -112,10 +113,24 @@ croatia_land <- st_read("HRV_adm/croatia_land.geojson")
 single_sf <- bind_rows(list(croatia_sea,croatia_land))
 ```
 
-
+Create map for Croatia together with stations. I don't know how to add labels.
 ```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
 stations_sf <- st_as_sf(station_coords)
 stations_sf$STATION <- row.names(station_coords)
 st_crs(stations_sf) = 4326
-ggplot() + geom_sf(data = single_sf) + geom_sf(data = stations_sf,shape = 4, color = "darkred", size = 5)
+ggplot() + geom_sf(data = single_sf) + geom_sf(data = stations_sf, aes(label = STATION), shape = 4, color = "darkred", size = 5) 
 ```
+
+Create grid for krigging. 10km grid is already available so I will first import it:
+```{r, echo=FALSE, message=FALSE}
+
+
+```
+Create grid
+```{r, echo=FALSE, message=FALSE}
+croatia_grid_sf <- st_read("Croatia_shapefile/hr_10km.shp")
+croatia_bbox <- st_as_sfc(st_bbox(croatia_grid_sf))
+croatia_outer_border <- st_intersection(croatia_bbox,croatia_grid_sf)
+croatia_grid_stars <- st_as_stars(croatia_outer_border, dx = 10000)
+```
+
