@@ -115,20 +115,20 @@ single_sf <- bind_rows(list(croatia_sea,croatia_land))
 
 Create map for Croatia together with stations. I don't know how to add labels.
 ```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
-stations_sf <- st_as_sf(station_coords)
-stations_sf$STATION <- row.names(station_coords)
-st_crs(stations_sf) = 4326
+stations_only <- data.frame(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
+NAME <- c(agg4$NAME[1:30])
+stations_only <- cbind(stations_only,NAME)
 plot_with_points <- ggplot() +
   geom_sf(data = single_sf) +
   geom_point(data = stations_only,
-             mapping = aes(x = LONG, y = LAT),
+             mapping = aes(x = LON, y = LAT),
              colour = "red",
              size = 6,
              shape = 4) +
   coord_sf()
 
 plot_with_points + 
-  geom_label_repel(data = stations_only, aes(x = LONG, y = LAT,label = NAME),
+  geom_label_repel(data = stations_only, aes(x = LON, y = LAT,label = NAME),
                   box.padding   = 0.35, 
                   point.padding = 0.5,
                   segment.color = 'grey50') +
