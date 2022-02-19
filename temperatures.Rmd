@@ -81,7 +81,7 @@ return(n_stations_by_year)
 checker(agg)
 ```
 
-To make things coherent (I'm not sure if this is correct way) we will remove records for year 2005. and also all records for stations 14442 and 14446
+To make things coherent (I'm not sure if this is correct way) we will remove records for year 2005. and also all records for stations 14442 and 14446. Station "Portoroz" is in Slovenia so it has to be removed as well.
 Let's include only data we need:
 ```{r, echo=FALSE, message=FALSE}
 agg2 <- subset(agg, YEAR != "2005" )
@@ -118,19 +118,37 @@ Create map for Croatia together with stations. I don't know how to add labels.
 stations_sf <- st_as_sf(station_coords)
 stations_sf$STATION <- row.names(station_coords)
 st_crs(stations_sf) = 4326
-ggplot() + geom_sf(data = single_sf) + geom_sf(data = stations_sf, aes(label = STATION), shape = 4, color = "darkred", size = 5) 
+plot_with_points <- ggplot() +
+  geom_sf(data = single_sf) +
+  geom_point(data = stations_only,
+             mapping = aes(x = LONG, y = LAT),
+             colour = "red",
+             size = 6,
+             shape = 4) +
+  coord_sf()
+
+plot_with_points + 
+  geom_label_repel(data = stations_only, aes(x = LONG, y = LAT,label = NAME),
+                  box.padding   = 0.35, 
+                  point.padding = 0.5,
+                  segment.color = 'grey50') +
+  theme_classic()
 ```
-
-Create grid for krigging. 10km grid is already available so I will first import it:
-```{r, echo=FALSE, message=FALSE}
-
-
-```
-Create grid
+For some reason, grid is created for rectangle and for Croatian boundaries. There are different values inside grid cells depending one the position of cell. I will assign NA value to cells outside Croatian boundary, and value 0 to cells inside Croatia.
 ```{r, echo=FALSE, message=FALSE}
 croatia_grid_sf <- st_read("Croatia_shapefile/hr_10km.shp")
 croatia_bbox <- st_as_sfc(st_bbox(croatia_grid_sf))
 croatia_outer_border <- st_intersection(croatia_bbox,croatia_grid_sf)
 croatia_grid_stars <- st_as_stars(croatia_outer_border, dx = 10000)
+for (x in 1:54) {
+  for (y in 1:57) {
+    if (croatia_grid_stars[[1]][x:x,y:y] == 0) {
+      croatia_grid_stars[[1]][x:x,y:y] <- NA
+    } 
+    else {
+      croatia_grid_stars[[1]][x:x,y:y] <- 0
+    }
+  }
+}
 ```
 
