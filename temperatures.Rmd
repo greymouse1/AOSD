@@ -102,10 +102,23 @@ row.names(station_coords_df) <- paste(agg4$NAME[1:30])
 station_coords <- SpatialPoints(station_coords_df)
 time <- as.POSIXct(unique(agg4$YEAR),tz="", "%Y")
 values <- agg4$MEAN_TEMP
-IDs <- paste("ID", 1:length(agg4$MEAN_TEMP), sep = "_")
-df <- data.frame(values = values, ID = IDs)
+df <- data.frame(values = values)
 st_object <- STFDF(station_coords,time,data=df)
 ```
+
+Plot STFDF data
+```{r, echo=FALSE, message=FALSE}
+#Plot multi-panel plots, one panel for every year showing locations in the country with colors for average temperaure
+stplot(st_object)
+
+#Plot time series
+stplot(st_object, mode="tp")
+stplot(st_object, mode="ts")
+
+#Plot space-time plots
+stplot(st_object, mode = "xt", scales = scales, xlab = NULL,col.regions=bpy.colors(50))
+```
+
 Load Croatian map
 ```{r, echo=FALSE, message=FALSE}
 croatia_sea <- st_read("HRV_adm/croatia.geojson")
@@ -140,6 +153,8 @@ croatia_grid_sf <- st_read("Croatia_shapefile/hr_10km.shp")
 croatia_bbox <- st_as_sfc(st_bbox(croatia_grid_sf))
 croatia_outer_border <- st_intersection(croatia_bbox,croatia_grid_sf)
 croatia_grid_stars <- st_as_stars(croatia_outer_border, dx = 10000)
+
+#replace bin values
 for (x in 1:54) {
   for (y in 1:57) {
     if (croatia_grid_stars[[1]][x:x,y:y] == 0) {
