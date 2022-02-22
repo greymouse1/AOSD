@@ -106,6 +106,30 @@ df <- data.frame(values = values)
 st_object <- STFDF(station_coords,time,data=df)
 ```
 
+Create data which will be used for sample variogram, for year 2004:
+```{r}
+crs = st_crs("EPSG:32632")
+stations.sf = st_as_sf(agg4[1:30,], coords = c("LONG", "LAT"), crs = "OGC:CRS84") %>%
+	st_transform(crs)
+```
+
+Plot sample variogram:
+```{r}
+sample.variogram <- variogram(stations.sf$MEAN_TEMP~1,stations.sf,cutoff=100000,width=10000)
+plot(sample.variogram, plot.numbers=TRUE)
+```
+
+We will try to fit this variogram:
+```{r}
+parameters1 <- fit.variogram(sample.variogram,vgm(7,model = "Exp",7000))
+```
+
+Now plot variogram with fit:
+```{r}
+plot(sample.variogram,parameters1, plot.numbers=TRUE)
+```
+Changing parameters doesn't change this poor fit too much, probably because of small amount of stations. We can't help this much but to proceed further with  the fitting of spatio-temporal variogram:
+
 Plot STFDF data
 ```{r, echo=FALSE, message=FALSE}
 #Plot multi-panel plots, one panel for every year showing locations in the country with colors for average temperaure
