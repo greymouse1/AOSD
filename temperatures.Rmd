@@ -115,13 +115,13 @@ stations.sf = st_as_sf(agg4[1:30,], coords = c("LONG", "LAT"), crs = "OGC:CRS84"
 
 Plot sample variogram:
 ```{r}
-sample.variogram <- variogram(stations.sf$MEAN_TEMP~1,stations.sf,cutoff=100000,width=10000)
+sample.variogram <- variogram(MEAN_TEMP~1,stations.sf,cutoff=100000,width=10000)
 plot(sample.variogram, plot.numbers=TRUE)
 ```
 
 We will try to fit this variogram:
 ```{r}
-parameters1 <- fit.variogram(sample.variogram,vgm(7,model = "Exp",7000))
+parameters1 <- fit.variogram(sample.variogram,vgm(4,model = "Exp",7000))
 ```
 
 Now plot variogram with fit:
