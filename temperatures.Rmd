@@ -20,6 +20,7 @@ library(stringr)
 library(maps)
 library(rnaturalearth)
 library(ggrepel)
+library(RColorBrewer)
 ```
 
 Import stations
@@ -121,7 +122,7 @@ plot(sample.variogram, plot.numbers=TRUE)
 
 We will try to fit this variogram:
 ```{r}
-parameters1 <- fit.variogram(sample.variogram,vgm(4,model = "Exp",7000))
+parameters1 <- fit.variogram(sample.variogram,vgm(7,model = "Exp",7000))
 ```
 
 Now plot variogram with fit:
@@ -140,8 +141,10 @@ stplot(st_object, mode="tp")
 stplot(st_object, mode="ts")
 
 #Plot space-time plots
-stplot(st_object, mode = "xt", scales = scales, xlab = NULL,col.regions=bpy.colors(50))
+scales=list(x=list(rot = 45))
+stplot(st_object, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
 ```
+
 
 Load Croatian map
 ```{r, echo=FALSE, message=FALSE}
@@ -150,7 +153,7 @@ croatia_land <- st_read("HRV_adm/croatia_land.geojson")
 single_sf <- bind_rows(list(croatia_sea,croatia_land))
 ```
 
-Create map for Croatia together with stations. I don't know how to add labels.
+Create map for Croatia together with stations.
 ```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
 stations_only <- data.frame(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
 NAME <- c(agg4$NAME[1:30])
@@ -190,4 +193,32 @@ for (x in 1:54) {
   }
 }
 ```
+Try process data along the logic of Irish wind example, so for a start, I will create space-wide form of data so I can follow the steps of tutorial.
+```{r, echo=FALSE, message=FALSE}
+# Create temp.loc object which hold station names, IDs, and coordinates
+temp.loc <- data.frame(NAME=agg4$NAME[1:30],ID=agg4$STATION_ID[1:30],LON=agg4$LONG[1:30],LAT=agg4$LAT[1:30])
+# Convert to spatial object
+coordinates(temp.loc) = ~LON+LAT
+# Set projection and datum
+proj4string(temp.loc) = "+proj=longlat +datum=WGS84"
+# Make transformed table
+station.names <- unique(agg4$NAME)
+stations.temps <- data.frame(NAME=agg4$NAME,TEMP=agg4$MEAN_TEMP)
+counter <- 1
 
+for (station in station.names) {
+  if (counter == 1) { 
+  current.subset <- subset(stations.temps, NAME == station)
+  holder <- data.frame(current.subset$TEMP)
+  colnames(holder)[ncol(holder)] <- paste0(station)
+  counter = counter + 1
+  }
+  else {
+  current.subset <- subset(stations.temps, NAME == station)
+  holder[,ncol(holder)+1] <- current.subset$TEMP
+  colnames(holder)[ncol(holder)] <- paste0(station)
+  counter = counter + 1
+  }
+  print(station)
+  }
+```
