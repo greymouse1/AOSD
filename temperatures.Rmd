@@ -4,6 +4,23 @@ author: "Nikola Grlj"
 date: "2/4/2022"
 output: html_document
 ---
+# Spatio-temporal interpolation of mean temperature values for Croatia in period 2004-2020
+
+### Summary
+1. Introduction
+  + motivation
+  + datasets
+  + related work
+  + research questions
+2. Methods
+  + which methods
+  + why
+3. Results
+  + presentation of results
+4. Discussion and conclusion
+  + do assumptions hold
+  + strengths and weaknesses
+5. References
 
 Load all necessary packages
 ```{r Load all packages, echo=FALSE, message=FALSE}
@@ -23,7 +40,46 @@ library(ggrepel)
 library(RColorBrewer)
 library(xts)
 ```
+# Spatio-temporal interpolation of mean temperature values for Croatia in period 2004-2020
 
+### Summary
+1. **Introduction**
+  + motivation
+  + datasets
+  + related work
+  + research questions
+2. **Methods**
+  + which methods
+  + why
+3. **Results**
+  + presentation of results
+4. **Discussion and conclusion**
+  + do assumptions hold
+  + strengths and weaknesses
+5. **References**
+
+## 1. Introduction
+
+Nowadays, global warming is taken as an undeniable truth, being confirmed by multiple studies across the globe. Rising temperatures can have negative effects on likelihod of different populations around the world, mainly by affecting conditions for growing foods, disturbing sensitive ecosystems, and rising sea levels. Croatia is consisted of three distinctive parts; continental part, mountainous part and coastal part. Each one of them has different climate and temperatures even though whole country is classified as having continental climate and coast hosting mediterannean climate. We would like to have a sense of how climate change and increasing temperatures affect different parts of Croatia, which can be used as a strarting point for more detailed research in order to plan mitigation measures for possible negative effects of increasing temperatures.
+With wide availability of sensors which measure atmospheric conditions, we can access data for desired area and inquire on how temperatures affect that area.
+In this work, we will look at temperature data recorded on 30 stations on the territory of Republic of Croatia, starting in 2004. and ending in 2020. Data is provided by NOAA (National Oceanic and Atmospheric Administration)[1]. Inspiration was taken from two papers, Spatio-temporal regression kriging model of mean daily temperature for Croatia by Sekulić et al. [2] and Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images by Hengl et al. [3]. Other work which was used as and aid in writing code and structuring data processing was vignettes for **gstat** and **spacetime**, as well as tutorial on spatio-temporal krigging [4]
+
+In this work, we want to answer the following questions:
+  * Is there a trend of rising temperature in Croatia?
+  * If there is, which areas are affected by this and how?
+  * By looking at the results of krigging, can we notice any factors which may influence temperature on the territory of Croatia, for example altitude, latitude, proximity to sea or anything else, which could be used for another study (krigging with multiple variables)?
+
+
+
+## 5. References 
+
+[1] NOAA https://www.ncei.noaa.gov
+
+[2] Sekulić, A., Kilibarda, M., Protić, D. et al. Spatio-temporal regression kriging model of mean daily temperature for Croatia. Theor Appl Climatol 140, 101–114 (2020). https://doi.org/10.1007/s00704-019-03077-3
+
+[3] Hengl, T., Heuvelink, G.B.M., Perčec Tadić, M. et al. Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images. Theor Appl Climatol 107, 265–277 (2012). https://doi.org/10.1007/s00704-011-0464-2
+
+[4] https://www.r-bloggers.com/2015/08/spatio-temporal-kriging-in-r/
 Import stations
 ```{r Import stations, echo=FALSE, message=FALSE}
 stations <- read_csv("stations.csv")
@@ -185,6 +241,9 @@ plot(sampl.var,SimplesumMetric,map=F)
 
 # Plot those which give result (only last three for now)
 plot(sampl.var,list(metric_Vgm, sumMetric_Vgm, SimplesumMetric_Vgm),all=T,wireframe=T)
+
+# Get map
+
 ```
 
 
@@ -288,5 +347,5 @@ pred.grd = STF(spatial.grid, tgrd)
 v = vgmST("separable", space = vgm(1, "Exp", 750000), time = vgm(1, "Exp", 1.5 * 3600),sill=0.6)
 v = variogramST(values~1,data=st_object)
 
-temp.ST = krigeST(values ~ 1, temp.data, pred.grd, v)
+temp.ST = krigeST(values ~ 1, st_object, pred.grd, SimplesumMetric_Vgm)
 ```
