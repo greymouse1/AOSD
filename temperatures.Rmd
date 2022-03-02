@@ -212,10 +212,10 @@ plot(sampl.var, wireframe=T)
 # We have 5 options for fitting; separable, product sum, metric, sum metric, and simple sum metric.
 # First thing is to set lower and upper limits for all models
 pars.l <- c(sill.s = 0, range.s = 10, nugget.s = 0,sill.t = 0, range.t = 1, nugget.t = 0,sill.st = 0, range.st = 10, nugget.st = 0, anis = 0)
-pars.u <- c(sill.s = 200, range.s = 1000, nugget.s = 100,sill.t = 200, range.t = 60, nugget.t = 100,sill.st = 200, range.st = 1000, nugget.st = 100,anis = 700) 
+pars.u <- c(sill.s = 60, range.s = 50000, nugget.s = 10,sill.t = 200, range.t = 50000, nugget.t = 10,sill.st = 200, range.st = 50000, nugget.st = 10,anis = 700) 
 
 # Separable model for range 200km and time half a day days
-separable <- vgmST("separable", space = vgm(1,"Exp", 150000, 1),time = vgm(1,"Exp",0.5 * 3600), sill=0.6)
+separable <- vgmST("separable", space = vgm(40,"Exp",20000,nugget=0),time = vgm(40,"Exp",200,nugget=0), sill=2)
 
 # Check how it compares to sample variogram (doesn't pot both plots for some reason)
 plot(sampl.var,separable,map=F) 
@@ -229,13 +229,13 @@ separable_Vgm <- fit.StVariogram(sampl.var, separable, fit.method=11,method="L-B
 
 # Product sum model
 
-prodSumModel <- vgmST("productSum", space = vgm(1,"Exp", 150000, 1),time = vgm(1,"Exp",3600), k=50)
+prodSumModel <- vgmST("productSum", space = vgm(1,"Exp", 150000, 1),time = vgm(1,"Exp",3600), k=500)
 
 prodSumModel_Vgm <- fit.StVariogram(sampl.var, prodSumModel,method = "L-BFGS-B",lower=pars.l)
 attr(prodSumModel_Vgm, "MSE")
 
 # Metric
-metric <- vgmST("metric", joint = vgm(50,"Mat", 5000, 0), stAni=500) 
+metric <- vgmST("metric", joint = vgm(30,"Mat", 12000, 0), stAni=1000) 
 metric_Vgm <- fit.StVariogram(sampl.var, metric, method="L-BFGS-B",lower=pars.l)
 attr(metric_Vgm, "MSE")
 plot(sampl.var,metric,map=F) 
@@ -295,11 +295,11 @@ croatia_grid_sf <- st_read("Croatia_shapefile/hr_10km.shp")
 croatia_grid_sf <- st_transform(croatia_grid_sf,3765)
 croatia_bbox <- st_as_sfc(st_bbox(croatia_grid_sf))
 croatia_outer_border <- st_intersection(croatia_bbox,croatia_grid_sf)
-croatia_grid_stars <- st_as_stars(croatia_outer_border, dx = 10000)
+croatia_grid_stars <- st_as_stars(croatia_outer_border)
 
 #replace bin values
-for (x in 1:55) {
-  for (y in 1:59) {
+for (x in 1:246) {
+  for (y in 1:264) {
     if (croatia_grid_stars[[1]][x:x,y:y] == 0) {
       croatia_grid_stars[[1]][x:x,y:y] <- NA
     } 
@@ -351,17 +351,26 @@ map.cro = map2SpatialLines(map("world", "croatia", fill=TRUE, ol="transparent", 
 proj4string(map.cro) = "+init=epsg:4326"
 map.cro = spTransform(map.cro, "+init=epsg:3765")
 
-# Create spatio-temporal grid for 10 points in period from 2004-2020
-spatial.grid = SpatialPixels(SpatialPoints(makegrid(map.cro, n = 10000)),proj4string = proj4string(map.cro))
+# Create spatial grid
+spatial.grid = SpatialPixels(SpatialPoints(makegrid(map.cro, n = 10000)),
+                             proj4string = proj4string(map.cro))
 
+# Create temporal grid
 tgrd = seq(min(index(temp.data)), max(index(temp.data)), length=16)
+
+# Merge two grids into spatio-temporal grid
 pred.grd = STF(spatial.grid, tgrd)
 
-# v = vgmST("separable", space = vgm(1, "Exp", 750000), time = vgm(1, "Exp", 1.5 * 3600),sill=0.6)
-# v = variogramST(values~1,data=st_object)
+# Assign same proj4string due to some issues of two strings not being equal
 proj4string(st_object) = proj4string(pred.grd)
-temp.ST = krigeST(values ~ 1, st_object, pred.grd, metric_Vgm)
 
+# Krige
+# temp.ST = krigeST(values ~ 1, st_object, pred.grd, metric_Vgm)
+temp.ST <- krige(values ~ 1, data=st_object, model=metric_Vgm, newdata=)
+
+# Pack borders and stations
 layout = list(list("sp.lines", map.cro, col='grey'),list("sp.points", station_coords, first=F, cex=.5))
+
+# Plot all together
 stplot(temp.ST,cuts=11,col.regions=rev(brewer.pal(11, "RdBu")), sp.layout = layout)
 ```
