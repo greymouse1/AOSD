@@ -45,7 +45,7 @@ library(maptools)
 
 Nowadays, global warming is taken as an undeniable truth, being confirmed by multiple studies across the globe. Rising temperatures can have negative effects on likelihod of different populations around the world, mainly by affecting conditions for growing foods, disturbing sensitive ecosystems, and rising sea levels. Croatia is consisted of three distinctive parts; continental part, mountainous part and coastal part. Each one of them has different climate and temperatures even though whole country is classified as having continental climate and coast hosting mediterannean climate. We would like to have a sense of how climate change and increasing temperatures affect different parts of Croatia, which can be used as a strarting point for more detailed research in order to plan mitigation measures for possible negative effects of increasing temperatures.
 With wide availability of sensors which measure atmospheric conditions, we can access data for desired area and inquire on how temperatures affect that area.
-In this work, we will look at temperature data recorded on 30 stations on the territory of Republic of Croatia, starting in 2004. and ending in 2020. Data is provided by NOAA (National Oceanic and Atmospheric Administration)[1]. Inspiration was taken from two papers, Spatio-temporal regression kriging model of mean daily temperature for Croatia by Sekulić et al. [2] and Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images by Hengl et al. [3]. Other work which was used as and aid in writing code and structuring data processing was vignettes for **gstat** and **spacetime** [5][6][7], as well as tutorial on spatio-temporal krigging [4]
+In this work, we will look at temperature data recorded on 30 stations on the territory of Republic of Croatia, starting in 2004. and ending in 2020. Data is provided by NOAA (National Oceanic and Atmospheric Administration)[[1]](#source1). Inspiration was taken from two papers, Spatio-temporal regression kriging model of mean daily temperature for Croatia by Sekulić et al. [[2]](#source2) and Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images by Hengl et al. [[3]](#source3). Other work which was used as and aid in writing code and structuring data processing was vignettes for **gstat** and **spacetime** [[5]](#source5)[[6]](#source6)[[7]](#source7), as well as tutorial on spatio-temporal krigging [[4]](#source4)
 
 In this work, we want to answer the following questions:
   * Is there a trend of rising temperature in Croatia?
@@ -164,7 +164,7 @@ st_object <- STFDF(station_coords,time,data=df)
 ```
 
 Plot STFDF data
-```{r Plot STFF data, echo=TRUE}
+```{r Plot STFF data, echo=TRUE, fig.align="center"}
 # Pull map of Croatia
 map.cro = map2SpatialLines(map("world", "croatia", fill=TRUE, ol="transparent", plot=F))
 proj4string(map.cro) = "+init=epsg:4326"
@@ -185,6 +185,7 @@ stplot(st_object, mode="ts")
 scales=list(x=list(rot = 45))
 stplot(st_object, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
 ```
+
 ```{r Aggregate by month, echo=TRUE, message=FALSE}
 # Aggregate data by year and month
 stations$year <- strftime(stations$DATE, "%Y")  
@@ -209,8 +210,7 @@ autumn <- year.month.final[year.month.final$month %in% c("09","10","11"),]
 
 
 # Next I need average temperature of all three months which compromise one season
-# First goes winter
-
+# For that reason I made small function which will do this for every season
 
 season.averager <- function(df) {
   
@@ -230,14 +230,43 @@ for (row in 1:nrow(df)) {
 return(season.average)
 }
 
+# Calculate averages for every season
 winter.averaged <- season.averager(winter)
 spring.averaged <- season.averager(spring)
 summer.averaged <- season.averager(summer)
 autumn.averaged <- season.averager(autumn)
+
+
+# Now I will again created STFDF object so I can create nice time series
+
+# Time stamps
+season.time <- as.POSIXct("2000-12-31", tz = "")+365*24*3600*(7:20)
+
+# Winter
+st.winter <- STFDF(station_coords,season.time,data=data.frame(as.numeric(winter.averaged$AVERAGE)))
+stplot(st.winter, mode="ts")
+stplot(st.winter, mode="tp")
+stplot(st.winter, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+
+# Spring
+st.spring <- STFDF(station_coords,season.time,data=data.frame(as.numeric(spring.averaged$AVERAGE)))
+stplot(st.spring, mode="ts")
+stplot(st.spring, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+
+# Summer
+st.summer <- STFDF(station_coords,season.time,data=data.frame(as.numeric(summer.averaged$AVERAGE)))
+stplot(st.summer, mode="ts")
+stplot(st.summer, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+
+# Autumn
+st.autumn <- STFDF(station_coords,season.time,data=data.frame(as.numeric(autumn.averaged$AVERAGE)))
+stplot(st.autumn, mode="ts")
+stplot(st.autumn, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+
 ```
 
 Now we will create sample spatio-temporal variogram using all data from all stations.
-```{r Create sample spatio-temporal variogram, echo=TRUE}
+```{r Create sample spatio-temporal variogram, echo=TRUE, fig.align="center"}
 # Create sample spatio-temporal variogram
 sampl.var <- variogramST(values~1,data=st_object)
 
@@ -252,7 +281,7 @@ plot(sampl.var, wireframe=T)
 ```
 
 This is a dummy spatial variogram used to fine-tune parameters which will be used later on in fitting of spatio-temporal variogram.
-```{r Create sample spatial variogram, echo=TRUE}
+```{r Create sample spatial variogram, echo=TRUE, fig.align="center"}
 # Get lag for year 2012
 lag8 <- subset(agg4, YEAR == "2012" )
 
@@ -274,7 +303,7 @@ plot(v,lag8_spatial_var_model,plot.numbers=TRUE)
 ```
 
 Now we create models for spatio-temporal variogram and try to fit them:
-```{r Fit variogram, echo=TRUE, message=FALSE}
+```{r Fit variogram, echo=TRUE, message=FALSE, fig.align="center"}
 # We have 5 options for fitting; separable, product sum, metric, sum metric, and simple sum metric.
 # First thing is to set lower and upper limits for all models
 pars.l <- c(sill.s = 0, range.s = 10, nugget.s = 0,sill.t = 0, range.t = 1, nugget.t = 0,sill.st = 0, range.st = 10, nugget.st = 0, anis = 0)
@@ -334,6 +363,7 @@ plot_with_points +
   geom_label_repel(data = stations_only, aes(x = LON, y = LAT,label = NAME),
                   box.padding   = 0.1, 
                   point.padding = 0.5,
+                  size = 2,
                   segment.color = 'grey50') +
   theme_classic()
 ```
@@ -358,7 +388,7 @@ for (x in 1:246) {
 }
 ```
 Proceed to kriging and display results.
-```{r, echo=TRUE, error=FALSE, warning=FALSE}
+```{r, echo=TRUE, error=FALSE, warning=FALSE, fig.align="center"}
 # Create spatial grid
 spatial.grid = SpatialPixels(SpatialPoints(makegrid(map.cro, n = 10000)),
                              proj4string = proj4string(map.cro))
@@ -383,16 +413,16 @@ stplot(temp.ST,cuts=11,col.regions=rev(brewer.pal(11, "RdBu")), sp.layout = layo
 ```
 ## 5. References 
 
-[1] NOAA https://www.ncei.noaa.gov
+[[1]]{#source1} NOAA https://www.ncei.noaa.gov
 
-[2] Sekulić, A., Kilibarda, M., Protić, D. et al. Spatio-temporal regression kriging model of mean daily temperature for Croatia. Theor Appl Climatol 140, 101–114 (2020). https://doi.org/10.1007/s00704-019-03077-3
+[[2]]{#source2} Sekulić, A., Kilibarda, M., Protić, D. et al. Spatio-temporal regression kriging model of mean daily temperature for Croatia. Theor Appl Climatol 140, 101–114 (2020). https://doi.org/10.1007/s00704-019-03077-3
 
-[3] Hengl, T., Heuvelink, G.B.M., Perčec Tadić, M. et al. Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images. Theor Appl Climatol 107, 265–277 (2012). https://doi.org/10.1007/s00704-011-0464-2
+[[3]]{#source3} Hengl, T., Heuvelink, G.B.M., Perčec Tadić, M. et al. Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images. Theor Appl Climatol 107, 265–277 (2012). https://doi.org/10.1007/s00704-011-0464-2
 
-[4] https://www.r-bloggers.com/2015/08/spatio-temporal-kriging-in-r/
+[[4]]{#source4} https://www.r-bloggers.com/2015/08/spatio-temporal-kriging-in-r/
 
-[5] Pebesma, Edzer. (2012). Spacetime: Spatio-Temporal Data in R. Journal of Statistical Software. 51. 1-30. 10.18637/jss.v051.i07. 
+[[5]]{#source5} Pebesma, Edzer.Spacetime: Spatio-Temporal Data in R. Journal of Statistical Software. 51. 1-30. (2012). 10.18637/jss.v051.i07. 
 
-[6] Pebesma, Edzer, Graeler, Ben, Introduction to spatio-temporal variography  (2021.)
+[[6]]{#source6} Pebesma, Edzer, Graeler, Ben. Introduction to spatio-temporal variography  (2021.)
 
-[7] Pebesma, Edzer, Graeler, Ben, Gerard Heuvelink. Spatio-temporal interpolation using gstat (2016) 
+[[7]]{#source7} Pebesma, Edzer, Graeler, Ben. Gerard Heuvelink. Spatio-temporal interpolation using gstat (2016.) 
