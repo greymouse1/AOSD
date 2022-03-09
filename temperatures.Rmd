@@ -4,7 +4,54 @@ author: "Nikola Grlj"
 date: "2/4/2022"
 output: html_document
 ---
-# Load all necessary packages
+# Spatio-temporal interpolation of mean temperature values for Croatia in period 2004-2020
+
+### Summary
+1. [**Introduction**](#chapter1)
+  + motivation
+  + datasets
+  + related work
+  + research questions
+2. [**Methods**](#chapter2)
+  + which methods
+  + why
+3. [**Results**](#chapter3)
+  + presentation of results
+4. [**Discussion and conclusion**](#chapter4)
+  + do assumptions hold
+  + strengths and weaknesses
+5. [**References**](#chapter5)
+
+## 1. Introduction{#chapter1}
+
+Nowadays, global warming is taken as an undeniable truth, being confirmed by multiple studies across the globe. Rising temperatures can have negative effects on likelihod of different populations around the world, mainly by affecting conditions for growing foods, disturbing sensitive ecosystems, and rising sea levels. Croatia is consisted of three distinctive parts; continental part, mountainous part and coastal part. Each one of them has different climate and temperatures even though whole country is classified as having continental climate and coast hosting mediterannean climate. We would like to have a sense of how climate change and increasing temperatures affect different parts of Croatia, which can be used as a strarting point for more detailed research in order to plan mitigation measures for possible negative effects of increasing temperatures.
+With wide availability of sensors which measure atmospheric conditions, we can access data for desired area and inquire on how temperatures affect that area.
+In this work, we will look at temperature data recorded on 30 stations on the territory of Republic of Croatia, starting in 2004. and ending in 2020. Data is provided by NOAA (National Oceanic and Atmospheric Administration)[[1]](#source1). Inspiration was taken from two papers, Spatio-temporal regression kriging model of mean daily temperature for Croatia by Sekulić et al. [[2]](#source2) and Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images by Hengl et al. [[3]](#source3). Other work which was used as and aid in writing code and structuring data processing was vignettes for **gstat** and **spacetime** [[5]](#source5)[[6]](#source6)[[7]](#source7), as well as tutorial on spatio-temporal krigging [[4]](#source4)
+
+In this work, we want to answer the following questions:
+  * Is there a trend of rising temperature in Croatia?
+  * If there is, which areas are affected by this and how?
+  * By looking at the results of krigging, can we notice any factors which may influence temperature on the territory of Croatia, for example altitude, latitude, proximity to sea or anything else, which could be used for another study (kriging with multiple variables)?
+
+## 2. Methods{#chapter2}
+Method I'm going to use is ordinary spatio-temporal kriging. ----Don't know why this is best yet---
+In order to be able to perform kriging, I need to model a spatio-temporal variogram. In usual case of purely spatial kriging, matrix of covariances is consisted only of spatial distances between stations. In my case, temporal distance has to be taken into account as well. Workflow will have the following order:
+1. Download data
+2. Process data (I selected only stations and years which have complete data)
+3. Create STFDF object which holds station coordinates, yearly average temperature readings for these stations and their timestamps
+
+From this data we will then be able to model:
+4. Sample spatio-temporal variogram (for all years and all stations)
+5. Find the best fitting model for sample variogram
+6. Create spatio-temporal prediction grid to be used for kriging
+7. Perform kriging
+
+Main packages I will be using are **gstat** package which provides functions for geostatistical analysis (creating sample and model variogram, and fitting latter to the former), and **spacetime** package (used for creating structured spatio-temporal data which serves as input for modelling variograms and later performing kriging).
+
+## 3. Results{#chapter3}
+
+This chapter will present results.
+
 ```{r Load all packages, echo=TRUE, message=FALSE}
 library(plyr)
 library(tidyverse)
@@ -23,51 +70,6 @@ library(RColorBrewer)
 library(xts)
 library(maptools)
 ```
-# Spatio-temporal interpolation of mean temperature values for Croatia in period 2004-2020
-
-### Summary
-1. **Introduction**
-  + motivation
-  + datasets
-  + related work
-  + research questions
-2. **Methods**
-  + which methods
-  + why
-3. **Results**
-  + presentation of results
-4. **Discussion and conclusion**
-  + do assumptions hold
-  + strengths and weaknesses
-5. **References**
-
-## 1. Introduction
-
-Nowadays, global warming is taken as an undeniable truth, being confirmed by multiple studies across the globe. Rising temperatures can have negative effects on likelihod of different populations around the world, mainly by affecting conditions for growing foods, disturbing sensitive ecosystems, and rising sea levels. Croatia is consisted of three distinctive parts; continental part, mountainous part and coastal part. Each one of them has different climate and temperatures even though whole country is classified as having continental climate and coast hosting mediterannean climate. We would like to have a sense of how climate change and increasing temperatures affect different parts of Croatia, which can be used as a strarting point for more detailed research in order to plan mitigation measures for possible negative effects of increasing temperatures.
-With wide availability of sensors which measure atmospheric conditions, we can access data for desired area and inquire on how temperatures affect that area.
-In this work, we will look at temperature data recorded on 30 stations on the territory of Republic of Croatia, starting in 2004. and ending in 2020. Data is provided by NOAA (National Oceanic and Atmospheric Administration)[[1]](#source1). Inspiration was taken from two papers, Spatio-temporal regression kriging model of mean daily temperature for Croatia by Sekulić et al. [[2]](#source2) and Spatio-temporal prediction of daily temperatures using time-series of MODIS LST images by Hengl et al. [[3]](#source3). Other work which was used as and aid in writing code and structuring data processing was vignettes for **gstat** and **spacetime** [[5]](#source5)[[6]](#source6)[[7]](#source7), as well as tutorial on spatio-temporal krigging [[4]](#source4)
-
-In this work, we want to answer the following questions:
-  * Is there a trend of rising temperature in Croatia?
-  * If there is, which areas are affected by this and how?
-  * By looking at the results of krigging, can we notice any factors which may influence temperature on the territory of Croatia, for example altitude, latitude, proximity to sea or anything else, which could be used for another study (kriging with multiple variables)?
-
-## 2. Methods
-Method I'm going to use is ordinary spatio-temporal kriging. ----Don't know why this is best yet---
-In order to be able to perform kriging, I need to model a spatio-temporal variogram. In usual case of purely spatial kriging, matrix of covariances is consisted only of spatial distances between stations. In my case, temporal distance has to be taken into account as well. Workflow will have the following order:
-1. Download data
-2. Process data (I selected only stations and years which have complete data)
-3. Create STFDF object which holds station coordinates, yearly average temperature readings for these stations and their timestamps
-
-From this data we will then be able to model:
-4. Sample spatio-temporal variogram (for all years and all stations)
-5. Find the best fitting model for sample variogram
-6. Create spatio-temporal prediction grid to be used for kriging
-7. Perform kriging
-
-Main packages I will be using are **gstat** package which provides functions for geostatistical analysis (creating sample and model variogram, and fitting latter to the former), and **spacetime** package (used for creating structured spatio-temporal data which serves as input for modelling variograms and later performing kriging).
-
-
 
 Import stations
 ```{r Import stations, echo=TRUE, message=FALSE}
@@ -186,7 +188,7 @@ scales=list(x=list(rot = 45))
 stplot(st_object, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
 ```
 
-```{r Aggregate by month, echo=TRUE, message=FALSE}
+```{r Aggregate by month, echo=TRUE, message=FALSE,fig.align="center"}
 # Aggregate data by year and month
 stations$year <- strftime(stations$DATE, "%Y")  
 stations$month <- strftime(stations$DATE, "%m")
@@ -227,7 +229,7 @@ for (row in 1:nrow(df)) {
     i = 0
   }
 }
-return(season.average)
+return(season.average[order(season.average$YEAR),])
 }
 
 # Calculate averages for every season
@@ -236,7 +238,6 @@ spring.averaged <- season.averager(spring)
 summer.averaged <- season.averager(summer)
 autumn.averaged <- season.averager(autumn)
 
-
 # Now I will again created STFDF object so I can create nice time series
 
 # Time stamps
@@ -244,26 +245,59 @@ season.time <- as.POSIXct("2000-12-31", tz = "")+365*24*3600*(7:20)
 
 # Winter
 st.winter <- STFDF(station_coords,season.time,data=data.frame(as.numeric(winter.averaged$AVERAGE)))
-stplot(st.winter, mode="ts")
-stplot(st.winter, mode="tp")
-stplot(st.winter, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.winter,main="Winter",mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.winter,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
+stplot(st.winter,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
 
 # Spring
 st.spring <- STFDF(station_coords,season.time,data=data.frame(as.numeric(spring.averaged$AVERAGE)))
-stplot(st.spring, mode="ts")
-stplot(st.spring, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.spring,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.spring,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
+stplot(st.spring,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
 
 # Summer
 st.summer <- STFDF(station_coords,season.time,data=data.frame(as.numeric(summer.averaged$AVERAGE)))
-stplot(st.summer, mode="ts")
-stplot(st.summer, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.summer,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.summer,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
+stplot(st.summer,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
 
 # Autumn
 st.autumn <- STFDF(station_coords,season.time,data=data.frame(as.numeric(autumn.averaged$AVERAGE)))
-stplot(st.autumn, mode="ts")
-stplot(st.autumn, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
-
+stplot(st.autumn,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.autumn, main="Winter",ylab="Time",xlab="Temperature",mode="tp")
+stplot(st.autumn, main="Winter",ylab="Time",xlab="Temperature",mode="ts")
 ```
+Here I averaged readings for all seasons as well as for year(without taking seasons into account), so correlation will be calculated with years on x-axis and average temperature from all stations for a given season (or for full year).
+```{r Correlation coefficients, echo=TRUE, message=FALSE}
+# Whole year
+year.mean <- aggregate(agg4$MEAN_TEMP, list(agg4$YEAR), mean)
+
+cor.test(x=as.numeric(year.mean$Group.1),y=year.mean$x,method = "pearson")
+
+# Winter 
+winter.mean <- aggregate(as.numeric(winter.averaged$AVERAGE), list(winter.averaged$YEAR), mean)
+
+cor.test(x=as.numeric(winter.mean$Group.1),y=winter.mean$x,method = "pearson")
+
+# Spring
+spring.mean <- aggregate(as.numeric(spring.averaged$AVERAGE), list(spring.averaged$YEAR), mean)
+
+cor.test(x=as.numeric(spring.mean$Group.1),y=spring.mean$x,method = "pearson")
+
+# Summer
+summer.mean <- aggregate(as.numeric(summer.averaged$AVERAGE), list(summer.averaged$YEAR), mean)
+
+cor.test(x=as.numeric(summer.mean$Group.1),y=summer.mean$x,method = "pearson")
+
+# Autumn
+autumn.mean <- aggregate(as.numeric(autumn.averaged$AVERAGE), list(autumn.averaged$YEAR), mean)
+
+cor.test(x=as.numeric(autumn.mean$Group.1),y=autumn.mean$x,method = "pearson")
+```
+For years, we can see positive correlation wit correlation coefficient 0.72, and with =3.94 and df = 14, p-value is 0.0014 which is significant for confidence interval < 0.05.
+For seasons, we can see only significant correlations seems to be for Autumn with correlation coefficient of 0.56 which suggeests increase in temperatures as time goes. With a t=2.3758 and degrees of freedom df=12, p-value is 0.03 which is less than usual significance level of 0.05 so we can say this correlation is significant.
+Data suggests that season which has highest increase in temperature is Autumn.
+
 
 Now we will create sample spatio-temporal variogram using all data from all stations.
 ```{r Create sample spatio-temporal variogram, echo=TRUE, fig.align="center"}
@@ -338,8 +372,8 @@ print(paste("MSE for Simple sum metric model is: ",attr(SimplesumMetric_fitted, 
 plot(sampl.var,list(separable_fitted,prodSumModel_fitted,metric_fitted, sumMetric_fitted, SimplesumMetric_fitted),all=T,wireframe=T)
 ```
 
-Load Croatian map
-```{r Load map of Croatia, echo=TRUE, message=FALSE}
+Load data for Croatian map
+```{r Load data for map, echo=TRUE, message=FALSE}
 croatia_sea <- st_read("HRV_adm/croatia.geojson")
 croatia_land <- st_read("HRV_adm/croatia_land.geojson")
 single_sf <- bind_rows(list(croatia_sea,croatia_land))
@@ -388,7 +422,7 @@ for (x in 1:246) {
 }
 ```
 Proceed to kriging and display results.
-```{r, echo=TRUE, error=FALSE, warning=FALSE, fig.align="center"}
+```{r Kriging, echo=TRUE, error=FALSE, warning=FALSE, fig.align="center",fig.width=13}
 # Create spatial grid
 spatial.grid = SpatialPixels(SpatialPoints(makegrid(map.cro, n = 10000)),
                              proj4string = proj4string(map.cro))
@@ -411,7 +445,12 @@ layout = list(list("sp.lines", map.cro, col='grey'),list("sp.points", station_co
 # Plot all together
 stplot(temp.ST,cuts=11,col.regions=rev(brewer.pal(11, "RdBu")), sp.layout = layout)
 ```
-## 5. References 
+
+## 4. Discussion and conclusion{#chapter4}
+
+Some discussion here.
+
+## 5. References{#chapter5}
 
 [[1]]{#source1} NOAA https://www.ncei.noaa.gov
 
