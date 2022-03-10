@@ -81,7 +81,7 @@ Round all dates down to year
 stations$YEAR <- floor_date(stations$DATE, "year")
 ```
 
-Temperature is in Fahrenheight so let's convert it to Celsius degrees
+Temperature is in Fahrenheit so let's convert it to Celsius degrees
 ```{r Temperature conversion, echo=TRUE, message=FALSE}
 stations$TEMP <- (((stations$TEMP)-32)/1.8)
 ```
@@ -118,7 +118,6 @@ for (unique_year in unique(input_file$YEAR)) {
     }
   }
   difference <- setdiff(unique(input_file$STATION_ID),stations)
-  print(difference)
   differences[(length(differences)+1)] <- paste(unlist(difference),collapse=",")
   my_list[(length(my_list)+1)] <- counter
   counter <- 0
@@ -135,11 +134,42 @@ Let's include only data we need:
 ```{r Clean data, echo=TRUE, message=FALSE}
 agg4 <- subset(agg, YEAR != "2005" & STATION_ID != "14442" & STATION_ID != "14446")
 ```
-Now we should have dataset without year 2005(some stations missing data) and 2020(data available only for 1. January), and without stations 14442 and 14446. Let's check if that's correct:
+Now we should have dataset without year 2005(some stations missing data), and without stations 14442 and 14446. Let's check if that's correct:
 ```{r Check data again, echo=TRUE}
 checker(agg4)
 ```
-As we can see, now all years have same stations (30 of them). Next thing we can do is create space-time object STFDF.
+As we can see, now all years have same stations (30 of them). Next thing we can do is create space-time object STFDF and map of stations we use.
+
+Let's see where are stations located:
+Load data for Croatian map
+```{r Load data for map, echo=TRUE, message=FALSE}
+croatia_sea <- st_read("HRV_adm/croatia.geojson")
+croatia_land <- st_read("HRV_adm/croatia_land.geojson")
+single_sf <- bind_rows(list(croatia_sea,croatia_land))
+```
+
+Create map for Croatia together with stations.
+```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
+stations_only <- data.frame(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
+NAME <- c(agg4$NAME[1:30])
+stations_only <- cbind(stations_only,NAME)
+plot_with_points <- ggplot() +
+  geom_sf(data = single_sf) +
+  geom_point(data = stations_only,
+             mapping = aes(x = LON, y = LAT),
+             colour = "red",
+             size = 2,
+             shape = 4) +
+  coord_sf()
+
+plot_with_points + 
+  geom_label_repel(data = stations_only, aes(x = LON, y = LAT,label = NAME),
+                  box.padding   = 0.1, 
+                  point.padding = 0.5,
+                  size = 2,
+                  segment.color = 'grey50') +
+  theme_classic()
+```
 
 
 Create space-time object STFDF
@@ -174,20 +204,21 @@ map.cro = spTransform(map.cro, "+init=epsg:3765")
 
 # Plot multi-panel plots, one panel for every year showing locations in the country with colors for average temperature
 layout = list(list("sp.lines", map.cro, col='grey'),list("sp.points", station_coords, first=F, cex=.5))
-stplot(st_object, sp.layout = layout)
+stplot(st_object, sp.layout = layout, main="Temperature values",cuts=11,col.regions=rev(brewer.pal(11, "RdBu")))
 
 
 # Time series of temperature for every station
-stplot(st_object, mode="tp")
+stplot(st_object, mode="tp", main="Temperature by station",ylab="Average emperature",xlab="Year")
 
 # Time series of temperature for all stations
-stplot(st_object, mode="ts")
+stplot(st_object, mode="ts",main="Temperature by station",xlab="Year",ylab="Average temperature")
 
 # Plot space-time plots
 scales=list(x=list(rot = 45))
-stplot(st_object, mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st_object, mode = "xt", cuts=11,scales = scales,main="Average temperature", ylab="Year", xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
 ```
-
+From the above plots we can clearly see trend of rising average temperatures, as well as differences between stations. This makes sense because latitude affects this, as well as station's altitude (for example, ZAVIZAN is highest and coldest station).
+Now I will do analysis per season. Due to availability of the data, this data will be for years 2007.-2020.
 ```{r Aggregate by month, echo=TRUE, message=FALSE,fig.align="center"}
 # Aggregate data by year and month
 stations$year <- strftime(stations$DATE, "%Y")  
@@ -245,53 +276,56 @@ season.time <- as.POSIXct("2000-12-31", tz = "")+365*24*3600*(7:20)
 
 # Winter
 st.winter <- STFDF(station_coords,season.time,data=data.frame(as.numeric(winter.averaged$AVERAGE)))
-stplot(st.winter,main="Winter",mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
-stplot(st.winter,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
-stplot(st.winter,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
+stplot(st.winter,main="Winter",mode = "xt", cuts=11,scales = scales, ylab="Year", xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.winter,main="Winter",ylab="Temperature",xlab="Year", mode="tp")
+stplot(st.winter,main="Winter",ylab="Temperature",xlab="Year", mode="ts")
 
 # Spring
 st.spring <- STFDF(station_coords,season.time,data=data.frame(as.numeric(spring.averaged$AVERAGE)))
-stplot(st.spring,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
-stplot(st.spring,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
-stplot(st.spring,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
+stplot(st.spring,main="Spring", mode = "xt", cuts=11,scales = scales, ylab="Year", xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.spring,main="Spring",ylab="Temperature",xlab="Year", mode="tp")
+stplot(st.spring,main="Spring",ylab="Temperature",xlab="Year", mode="ts")
 
 # Summer
 st.summer <- STFDF(station_coords,season.time,data=data.frame(as.numeric(summer.averaged$AVERAGE)))
-stplot(st.summer,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
-stplot(st.summer,main="Winter",ylab="Time",xlab="Temperature", mode="tp")
-stplot(st.summer,main="Winter",ylab="Time",xlab="Temperature", mode="ts")
+stplot(st.summer,main="Summer", mode = "xt", cuts=11,scales = scales, ylab="Year", xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.summer,main="Summer",ylab="Temperature",xlab="Year", mode="tp")
+stplot(st.summer,main="Summer",ylab="Temperature",xlab="Year", mode="ts")
 
 # Autumn
 st.autumn <- STFDF(station_coords,season.time,data=data.frame(as.numeric(autumn.averaged$AVERAGE)))
-stplot(st.autumn,main="Winter", mode = "xt", cuts=11,scales = scales, xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
-stplot(st.autumn, main="Winter",ylab="Time",xlab="Temperature",mode="tp")
-stplot(st.autumn, main="Winter",ylab="Time",xlab="Temperature",mode="ts")
+stplot(st.autumn,main="Autumn", mode = "xt", cuts=11,scales = scales, ylab="Year", xlab = NULL,col.regions=rev(brewer.pal(11, "RdBu")))
+stplot(st.autumn, main="Autumn",ylab="Temperature",xlab="Year",mode="tp")
+stplot(st.autumn, main="Autumn",ylab="Temperature",xlab="Year",mode="ts")
 ```
-Here I averaged readings for all seasons as well as for year(without taking seasons into account), so correlation will be calculated with years on x-axis and average temperature from all stations for a given season (or for full year).
+Here I averaged readings for all seasons as well as for full year(without taking seasons into account), so correlation will be calculated with years on x-axis and average temperature from all stations for a given season (or for full year).
 ```{r Correlation coefficients, echo=TRUE, message=FALSE}
-# Whole year
-year.mean <- aggregate(agg4$MEAN_TEMP, list(agg4$YEAR), mean)
+# Whole year (all 12 months taken into average)
+year.mean <- aggregate(agg4$MEAN_TEMP, list(as.numeric(agg4$YEAR)), mean)
+print(paste("Change in average temperature from year ",year.mean[1,1]," to year ", year.mean[16,1]," is",(year.mean[16,2]-year.mean[1,2])))
+year.mean.lm <- lm(Group.1 ~ x, data = year.mean)
+summary(year.mean.lm)
 
 cor.test(x=as.numeric(year.mean$Group.1),y=year.mean$x,method = "pearson")
 
 # Winter 
 winter.mean <- aggregate(as.numeric(winter.averaged$AVERAGE), list(winter.averaged$YEAR), mean)
-
+print(paste("Change in average temperature from year ",winter.mean[1,1]," to year ", winter.mean[14,1]," is",(year.mean[14,2]-year.mean[1,2])))
 cor.test(x=as.numeric(winter.mean$Group.1),y=winter.mean$x,method = "pearson")
 
 # Spring
 spring.mean <- aggregate(as.numeric(spring.averaged$AVERAGE), list(spring.averaged$YEAR), mean)
-
+print(paste("Change in average temperature from year ",spring.mean[1,1]," to year ", spring.mean[14,1]," is",(year.mean[14,2]-year.mean[1,2])))
 cor.test(x=as.numeric(spring.mean$Group.1),y=spring.mean$x,method = "pearson")
 
 # Summer
 summer.mean <- aggregate(as.numeric(summer.averaged$AVERAGE), list(summer.averaged$YEAR), mean)
-
+print(paste("Change in average temperature from year ",summer.mean[1,1]," to year ", summer.mean[14,1]," is",(year.mean[14,2]-year.mean[1,2])))
 cor.test(x=as.numeric(summer.mean$Group.1),y=summer.mean$x,method = "pearson")
 
 # Autumn
 autumn.mean <- aggregate(as.numeric(autumn.averaged$AVERAGE), list(autumn.averaged$YEAR), mean)
-
+print(paste("Change in average temperature from year ",autumn.mean[1,1]," to year ", autumn.mean[14,1]," is",(year.mean[14,2]-year.mean[1,2])))
 cor.test(x=as.numeric(autumn.mean$Group.1),y=autumn.mean$x,method = "pearson")
 ```
 For years, we can see positive correlation wit correlation coefficient 0.72, and with =3.94 and df = 14, p-value is 0.0014 which is significant for confidence interval < 0.05.
@@ -314,7 +348,7 @@ plot(sampl.var, map=T)
 plot(sampl.var, wireframe=T)
 ```
 
-This is a dummy spatial variogram used to fine-tune parameters which will be used later on in fitting of spatio-temporal variogram.
+Below is a dummy spatial variogram used to fine-tune parameters which will be used later on in fitting of spatio-temporal variogram.
 ```{r Create sample spatial variogram, echo=TRUE, fig.align="center"}
 # Get lag for year 2012
 lag8 <- subset(agg4, YEAR == "2012" )
@@ -371,56 +405,8 @@ print(paste("MSE for Simple sum metric model is: ",attr(SimplesumMetric_fitted, 
 # Plot 3D plots for models
 plot(sampl.var,list(separable_fitted,prodSumModel_fitted,metric_fitted, sumMetric_fitted, SimplesumMetric_fitted),all=T,wireframe=T)
 ```
+We look at mean square error for every model and see that Sum metric model has lowest value. Even though, as we can see from visual inspection, there is a strange jump in variance at the beginning. For this reason, I choose Metric model which has more gradual rise in variance, similar to example for 2D variogram above where I fine tuned parameters.
 
-Load data for Croatian map
-```{r Load data for map, echo=TRUE, message=FALSE}
-croatia_sea <- st_read("HRV_adm/croatia.geojson")
-croatia_land <- st_read("HRV_adm/croatia_land.geojson")
-single_sf <- bind_rows(list(croatia_sea,croatia_land))
-```
-
-Create map for Croatia together with stations.
-```{r Croatia map, fig.align='center',fig.width=10, fig.height=7, include=TRUE, results='hide'}
-stations_only <- data.frame(LON = agg4$LONG[1:30], LAT = agg4$LAT[1:30])
-NAME <- c(agg4$NAME[1:30])
-stations_only <- cbind(stations_only,NAME)
-plot_with_points <- ggplot() +
-  geom_sf(data = single_sf) +
-  geom_point(data = stations_only,
-             mapping = aes(x = LON, y = LAT),
-             colour = "red",
-             size = 2,
-             shape = 4) +
-  coord_sf()
-
-plot_with_points + 
-  geom_label_repel(data = stations_only, aes(x = LON, y = LAT,label = NAME),
-                  box.padding   = 0.1, 
-                  point.padding = 0.5,
-                  size = 2,
-                  segment.color = 'grey50') +
-  theme_classic()
-```
-For some reason, grid is created for rectangle and for Croatian boundaries. There are different values inside grid cells depending one the position of cell. I will assign NA value to cells outside Croatian boundary, and value 0 to cells inside Croatia.
-```{r Create grid, eval=FALSE}
-croatia_grid_sf <- st_read("Croatia_shapefile/hr_10km.shp")
-croatia_grid_sf <- st_transform(croatia_grid_sf,3765)
-croatia_bbox <- st_as_sfc(st_bbox(croatia_grid_sf))
-croatia_outer_border <- st_intersection(croatia_bbox,croatia_grid_sf)
-croatia_grid_stars <- st_as_stars(croatia_outer_border)
-
-#replace bin values
-for (x in 1:246) {
-  for (y in 1:264) {
-    if (croatia_grid_stars[[1]][x:x,y:y] == 0) {
-      croatia_grid_stars[[1]][x:x,y:y] <- NA
-    } 
-    else {
-      croatia_grid_stars[[1]][x:x,y:y] <- 0
-    }
-  }
-}
-```
 Proceed to kriging and display results.
 ```{r Kriging, echo=TRUE, error=FALSE, warning=FALSE, fig.align="center",fig.width=13}
 # Create spatial grid
