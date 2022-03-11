@@ -147,7 +147,6 @@ checker(agg4)
 As we can see, now all years have same stations (30 of them). Next thing we can do is create space-time object STFDF and map of stations we use.
 
 Let's see where are stations located:
-
 ```{r Load data for map, echo=TRUE, message=FALSE}
 # Load data for Croatian map
 croatia_sea <- st_read("HRV_adm/croatia.geojson")
@@ -305,6 +304,7 @@ stplot(st.autumn,main="Autumn", mode = "xt", cuts=11,scales = scales, ylab="Year
 stplot(st.autumn, main="Autumn",ylab="Temperature",xlab="Year",mode="tp")
 stplot(st.autumn, main="Autumn",ylab="Temperature",xlab="Year",mode="ts")
 ```
+
 Here I averaged readings for all seasons as well as for full year (without taking seasons into account), so correlation will be calculated with years on x-axis and average temperature from all stations for a given season (or for full year).
 ```{r Correlation coefficients, echo=TRUE, message=FALSE, fig.align="center"}
 # Whole year (all 12 months taken into average)
@@ -362,6 +362,7 @@ plot(sampl.var, wireframe=T)
 ```
 
 Below is a sample spatial variogram used to fine-tune parameters which will be used later on in fitting of spatio-temporal variogram.
+
 ```{r Create sample spatial variogram, echo=TRUE, fig.align="center"}
 # Get lag for year 2012
 lag8 <- subset(agg4, YEAR == "2012" )
